@@ -16,7 +16,6 @@ const int BUTTON_HOLD_TIME_WITH_ALARM_MILLISEC = 500;
 const float DISARM_TIME_MINUTES = 30.0F;
 const float DEBOUNCE_TIME_SECONDS = 0.03F;
 
-InterruptIn button(BUTTON1);
 //try this
 
 int _currentState = STATE_STARTUP;
@@ -57,38 +56,53 @@ void ButtonRelease(){
 
 class doorSensor{
 public:
-    doorSensor(PinName sensorPin) : _sensorPin(sensorPin){
-        _sensorPin.rise( callback(this, doorSensor::doorOpen() ) );
-        _sensorPin.fall( callback(this, doorSensor::doorClose() ) );
+
+    enum doorState {doorIsClosed, doorIsOpen};
+    doorState currentDoorState;
+    int intDoorState;
+   
+    doorSensor(PinName sensorPin, PinName ledPin) : _sensorPin(sensorPin), _ledPin(ledPin) {//declare constructor
+        _sensorPin.rise(callback(this,&doorSensor::doorOpen));//attach interrupts, rising
+        _sensorPin.fall( callback(this,&doorSensor::doorClose) );//attach interrupts, falling
         if(_sensorPin.read()){
             currentDoorState = doorIsOpen;
         }else {
             currentDoorState = doorIsClosed;
         }
+        _ledPin=0;
+        intDoorState = 0;
     } 
-private:
-    enum doorState {doorIsClosed, doorIsOpen};
-    doorState currentDoorState;
-    InterruptIn _sensorPin;
 
-    Ticker tickerSoundAlarm;
     
-    void doorOpen(){
-        tickerSoundAlarm.attach(&SoundAlarm,ALARM_DELAY_TIME_SECONDS);
-    }
-     
-    static void doorClose(){
-        
+private:
+    
+
+    InterruptIn _sensorPin;
+    DigitalOut _ledPin;
+    Ticker tickerSoundAlarm;
+
+    void doorOpen(void){
+        _ledPin=!_ledPin;
+        if(currentDoorState == doorIsClosed) 
+            {
+                currentDoorState=doorIsOpen;
+                intDoorState=!intDoorState;
+            }
+        else
+            {currentDoorState = doorIsClosed;}
+        //printf("door open\r\n");
+        //tickerSoundAlarm.attach(&SoundAlarm,ALARM_DELAY_TIME_SECONDS);
     }
 
-    static void SoundAlarm(){
-        printf("Alarm is ON");
+    void doorClose(void){
+        //printf("door open\r\n");
+    }
+
+    static void SoundAlarm(void){
+        //printf("Alarm is ON");
     }
     
 };
-
-InterruptIn test(BUTTON1);
-
 
 class IndicatorLED {
 public:
@@ -124,3 +138,28 @@ private:
 };
 
 
+class LED_toggleable {
+        
+    public:
+        void on(void){
+            _control = 1;
+        };
+        
+        void off(void){
+            _control = 0;
+        };
+        
+        void flip(void){
+            _control = !_control;
+        };
+        
+        // Because _control and _button are private, you need to initialize them with an initializer list
+        LED_toggleable(PinName button_pin, PinName output_pin) : _control(output_pin), _button(button_pin) {
+            _button.fall(callback(this, &LED_toggleable::flip));
+            off();
+        };
+ 
+    private:
+        DigitalOut _control;
+        InterruptIn _button;
+};

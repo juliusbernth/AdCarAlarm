@@ -9,8 +9,11 @@
 
 int main(){
     printf("Hellooooo World!\r\n");
-    IndicatorLED disp(LED1);
+    
+    doorSensor door(BUTTON1,LED1);
     while(true) {
-        disp.blinkFast(200);
+        printf("%d\r\n",door.intDoorState);
+        thread_sleep_for(500);
+        //disp.blinkFast(200);
     }
 }
